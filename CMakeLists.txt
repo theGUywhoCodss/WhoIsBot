@@ -20,8 +20,7 @@ target_link_libraries(${PROJECT_NAME}
  
 # Include the DPP directories.
 target_include_directories(${PROJECT_NAME} PRIVATE
-    ${DPP_INCLUDE_DIR},
-    $ENV{HOME}/.config/discord_bot
+    ${DPP_INCLUDE_DIR}
 )
  
 # Set C++ version
@@ -29,3 +28,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     CXX_STANDARD 20
     CXX_STANDARD_REQUIRED ON
 )
+
+# Get Token File
+get_filename_component(TOKEN_FILE $ENV{HOME}/.config/discord_bot/TOKEN.txt ABSOLUTE)
+target_compile_definitions(discord-bot PRIVATE TOKEN_FILE_PATH="${TOKEN_FILE}")
