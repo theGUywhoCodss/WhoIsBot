@@ -1,5 +1,6 @@
 #include <cstddef>
 #include <dpp/dpp.h>
+#include <dpp/snowflake.h>
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -53,16 +54,26 @@ int main() {
 
   bot.on_log(dpp::utility::cout_logger());
 
-  bot.on_slashcommand([](const dpp::slashcommand_t &event) {
+  bot.on_slashcommand([&bot](const dpp::slashcommand_t &event) {
     if (event.command.get_command_name() == "ping") {
-      event.reply("Pong!");
+      event.reply("Pong! Ping is " + std::to_string(bot.rest_ping) +
+                  " seconds.");
+    } else if (event.command.get_command_name() == "withered") {
+      dpp::snowflake person =
+          std::get<dpp::snowflake>(event.get_parameter("another_user"));
+      event.reply("who is " + dpp::user::get_mention(person));
     }
   });
 
   bot.on_ready([&bot](const dpp::ready_t &event) {
     if (dpp::run_once<struct register_bot_commands>()) {
-      bot.global_command_create(
-          dpp::slashcommand("ping", "Ping pong!", bot.me.id));
+      dpp::slashcommand ping("ping", "Ping pong!", bot.me.id);
+      dpp::slashcommand wither("withered", "Is someone withered?", bot.me.id);
+
+      wither.add_option(dpp::command_option(dpp::co_mentionable, "another_user",
+                                            "Mention a user", true));
+
+      bot.global_bulk_command_create({ping, wither});
     }
   });
 
