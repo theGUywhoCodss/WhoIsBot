@@ -1,3 +1,4 @@
+#include "withered.h"
 #include <cstddef>
 #include <dpp/dpp.h>
 #include <dpp/snowflake.h>
@@ -59,9 +60,12 @@ int main() {
       event.reply("Pong! Ping is " + std::to_string(bot.rest_ping) +
                   " seconds.");
     } else if (event.command.get_command_name() == "withered") {
-      dpp::snowflake person =
+      dpp::snowflake user_id =
           std::get<dpp::snowflake>(event.get_parameter("another_user"));
-      event.reply("who is " + dpp::user::get_mention(person));
+
+      const dpp::user &person = event.command.get_resolved_user(user_id);
+
+      event.reply(withered_message(person.id, person.get_mention()));
     }
   });
 
