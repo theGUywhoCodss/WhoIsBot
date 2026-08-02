@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <thread>
 
 const int MAX_TOKENS = 10;
 
@@ -56,28 +57,44 @@ int main() {
   bot.on_log(dpp::utility::cout_logger());
 
   bot.on_slashcommand([&bot](const dpp::slashcommand_t &event) {
+    // Gets the ping
     if (event.command.get_command_name() == "ping") {
       event.reply("Pong! Ping is " + std::to_string(bot.rest_ping) +
                   " seconds.");
     } else if (event.command.get_command_name() == "withered") {
+      // Replies with user withered information
       dpp::snowflake user_id =
           std::get<dpp::snowflake>(event.get_parameter("another_user"));
 
       const dpp::user &person = event.command.get_resolved_user(user_id);
-
+      std::cout << "witheredrun\n";
       event.reply(withered_message(person.id, person.get_mention()));
+    } else if (event.command.get_command_name() == "save") {
+      std::cout << "MANUAL SAVE IN PROGRESS\n";
+      event.reply("Your save request is being processed. Please wait.");
+      save_withered();
+      dpp::message new_msg(event.command.channel_id,
+                           event.command.get_issuing_user().get_mention() +
+                               "'s save request has been fullfilled.");
+      bot.message_create(new_msg);
     }
   });
 
   bot.on_ready([&bot](const dpp::ready_t &event) {
+    std::cout << "PRINTING OPERATIONAL" << std::endl;
     if (dpp::run_once<struct register_bot_commands>()) {
+      // Define new commands
       dpp::slashcommand ping("ping", "Ping pong!", bot.me.id);
       dpp::slashcommand wither("withered", "Is someone withered?", bot.me.id);
-
+      dpp::slashcommand save(
+          "save", "Save ALL data (More dynamic options in the future)",
+          bot.me.id);
+      // Add options
       wither.add_option(dpp::command_option(dpp::co_mentionable, "another_user",
                                             "Mention a user", true));
-
-      bot.global_bulk_command_create({ping, wither});
+      // Push all commands
+      bot.global_bulk_command_create({ping, wither, save});
+      withered_init();
     }
   });
 
