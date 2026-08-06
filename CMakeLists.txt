@@ -13,8 +13,9 @@ add_executable(${PROJECT_NAME}
  
 # Find our pre-installed DPP package (using FindDPP.cmake).
 find_package(DPP REQUIRED)
-find_package(nlohmann_json 3.12.0 REQUIRED)
 
+set(JSON_BuildTests OFF CACHE INTERNAL "")
+add_subdirectory(json)
 
 # Link the pre-installed DPP package.
 target_link_libraries(${PROJECT_NAME} 
