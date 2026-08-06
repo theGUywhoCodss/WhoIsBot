@@ -23,7 +23,7 @@ std::string GET_TOKEN() {
   // Check if the file was opened successfully
   if (!file.is_open()) {
     std::cerr << "Error opening the file!\n";
-    return NULL;
+    return "";
   }
 
   std::string s;
@@ -39,7 +39,7 @@ std::string GET_TOKEN() {
   }
   if (!tokenCount) {
     std::cerr << "No Tokens!";
-    return NULL;
+    return "";
   } else if (tokenCount == 1) {
     return TOKENS[0];
   }
@@ -151,22 +151,22 @@ int main() {
       dpp::slashcommand unwither("unwither", "Cure someone!", bot.me.id);
 
       // Add options
-      withered.add_option(dpp::command_option(
-          dpp::co_mentionable, "another_user", "Mention a user", true));
-      wither.add_option(dpp::command_option(dpp::co_mentionable, "another_user",
+      withered.add_option(dpp::command_option(dpp::co_user, "another_user",
+                                              "Mention a user", true));
+      wither.add_option(dpp::command_option(dpp::co_user, "another_user",
                                             "mention a user", true));
-      unwither.add_option(dpp::command_option(
-          dpp::co_mentionable, "another_user", "mention a user", true));
+      unwither.add_option(dpp::command_option(dpp::co_user, "another_user",
+                                              "mention a user", true));
       // Push all commands
       bot.global_bulk_command_create({ping, withered, wither, unwither, save});
-
+      std::cout << "COMMANDS CREATED!\n";
       // Load config
       std::ifstream in(CONFIG_FILE_PATH);
       if (!in.is_open() || in.peek() == std::ifstream::traits_type::eof()) {
         std::cout << "UNABLE TO FIND CONFIG. MOST COMMANDS WON'T WORK!\n";
+      } else {
+        in >> config;
       }
-      in >> config;
-
       // Do Misc (outside functions, ...)
       withered_init();
     }
