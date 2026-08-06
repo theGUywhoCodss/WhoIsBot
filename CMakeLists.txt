@@ -36,5 +36,6 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 # Get Token File
 get_filename_component(TOKEN_FILE $ENV{HOME}/.config/discord_bot/TOKEN.txt ABSOLUTE)
 get_filename_component(WITHERED_FILE $ENV{HOME}/.config/discord_bot/json/withered.json ABSOLUTE)
+get_filename_component(CONFIG_FILE $ENV{HOME}/.config/discord_bot/config.json ABSOLUTE)
 
-target_compile_definitions(discord-bot PRIVATE TOKEN_FILE_PATH="${TOKEN_FILE}" PRIVATE WITHERED_FILE_PATH="${WITHERED_FILE}")
+target_compile_definitions(discord-bot PRIVATE TOKEN_FILE_PATH="${TOKEN_FILE}" PRIVATE WITHERED_FILE_PATH="${WITHERED_FILE}" PRIVATE CONFIG_FILE_PATH="${CONFIG_FILE}")

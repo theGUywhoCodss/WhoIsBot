@@ -16,6 +16,7 @@ std::thread save_thread;
 json allData = json::object();
 bool autoSave = true;
 const int save_delay = 300;
+const std::string save_data_message = "CURRENTLY SAVING DATA. TRY AGAIN LATER.";
 
 // Save info to file
 void save_withered() {
@@ -48,6 +49,20 @@ json get_info(int userid) {
   // std::lock_guard<std::mutex> lock(json_file_mutex);
 }
 
+// Sets variable and returns true/false depending on if the file was currently
+// being saved.
+bool set_info(int userid, json &info) {
+  std::unique_lock<std::mutex> lock(json_file_mutex, std::try_to_lock);
+  json temp = json::object();
+  if (!lock.owns_lock())
+    return false;
+  // lock mutex
+  // Override user data with the copy
+  allData[std::to_string(userid)] = info;
+  return true;
+}
+
+// LOOP FOR IN THE INIT AND DESTRUCTOR
 void save_runner() {
   std::this_thread::sleep_for(std::chrono::seconds(save_delay));
   while (autoSave) {
@@ -59,16 +74,19 @@ void save_runner() {
 
 // Startup Wither
 void withered_init() {
-  // Save data to global variable
+  save_thread = std::thread(save_runner);
+  save_thread.detach();
+
+  // Save data to global variable if there is a file.
   std::ifstream in(WITHERED_FILE_PATH);
   if (!in.is_open() || in.peek() == std::ifstream::traits_type::eof()) {
+    std::cout << "NO FILE FOUND FOR WITHER. WILL AUTOMATICALLY CREATE ONE NEXT "
+                 "SAVE.\n";
     return;
   }
   in >> allData;
   in.close();
 
-  save_thread = std::thread(save_runner);
-  save_thread.detach();
   std::cout << "WITHER SAVER AND FILE LOADED\n";
 }
 
@@ -80,14 +98,45 @@ void withered_destroy() {
 // Returns a string of the completed user message
 std::string withered_message(int userid, std::string username) {
   json j = get_info(userid);
-  if (j.is_null()) {
-    return "CURRENTLY SAVING DATA. TRY AGAIN LATER.";
-  }
+  if (j.is_null())
+    return save_data_message;
+
   std::string status = j["withered"] ? "withered" : "not withered";
   return username + " is " + status + ", and has been recovered " +
          std::to_string(j["recovered"].get<int>()) + " times.";
 }
 
-void wither(int userid) {}
+// Withers the user and returns a message
+std::string wither(int userid, std::string username) {
+  json j = get_info(userid);
+  if (j.is_null())
+    return save_data_message;
 
-void unwither(int userid) {}
+  if (j["withered"]) {
+    return "Already withered.";
+  } else {
+    // Pass info back to override new data
+    j["withered"] = true;
+    if (!set_info(userid, j))
+      return save_data_message;
+    return username + " has been WITHERED.";
+  }
+}
+
+// Unwithers the user and returns a message
+std::string unwither(int userid, std::string username) {
+  json j = get_info(userid);
+  if (j.is_null())
+    return save_data_message;
+
+  if (!j["withered"]) {
+    return "They are alive and well.";
+  } else {
+    // Pass info back to override new data
+    j["withered"] = false;
+    j["recovered"] = j["recovered"].get<int>() + 1;
+    if (!set_info(userid, j))
+      return save_data_message;
+    return username + " has been CURED!";
+  }
+}
