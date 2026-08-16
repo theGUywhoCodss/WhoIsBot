@@ -1,6 +1,9 @@
-#include "withered.h"
+#include "configdata.h"
+#include "witherdata.h"
+#include "witherhandler.h"
 #include <algorithm>
-#include <cstddef>
+#include <dpp/appcommand.h>
+#include <dpp/commandhandler.h>
 #include <dpp/dpp.h>
 #include <dpp/guild.h>
 #include <dpp/nlohmann/json_fwd.hpp>
@@ -12,7 +15,15 @@
 
 using json = nlohmann::json;
 const int MAX_TOKENS = 10;
-json config = json::object();
+const std::vector<std::string> config_variables = {"reaper_role"};
+
+// Checks if a member has a role
+bool has_role(dpp::guild_member member, dpp::snowflake role) {
+  const std::vector<dpp::snowflake> &user_roles = member.get_roles();
+
+  return std::find(user_roles.begin(), user_roles.end(), role) !=
+         user_roles.end();
+}
 
 // Get the SELECTED token from the ~/.config/discord_bot.TOKEN.txt file.
 // (Include multiple tokens and you will be able to select between them).
@@ -76,10 +87,6 @@ int main() {
         std::cout << "MANUAL SAVE IN PROGRESS\n";
         event.reply("Your save request is being processed. Please wait.");
         save_withered();
-        // dpp::message new_msg(event.command.channel_id,
-        //                     event.command.get_issuing_user().get_mention()
-        //                     +
-        //                       "'s save request has been fullfilled.");
         event.follow_up(event.command.get_issuing_user().get_mention() +
                         "'s save request has been fullfilled.");
       } else if (event.command.get_command_name() == "ping") {
@@ -96,14 +103,8 @@ int main() {
       } else if (event.command.get_command_name() == "wither") {
         // Withers the user if the author has the reaper role.
         // Check for role
-        const std::vector<dpp::snowflake> &user_roles =
-            event.command.member.get_roles();
-        dpp::snowflake role = config["reaper_role"];
-
-        bool has_role = std::find(user_roles.begin(), user_roles.end(), role) !=
-                        user_roles.end();
-
-        if (!has_role) {
+        if (!has_role(event.command.member,
+                      std::stoll(get_config_info("reaper_role")))) {
           event.reply("You do not have the reaper role.");
           return;
         }
@@ -112,19 +113,15 @@ int main() {
         dpp::snowflake user_id =
             std::get<dpp::snowflake>(event.get_parameter("another_user"));
         const dpp::user &person = event.command.get_resolved_user(user_id);
-        event.reply(wither(person.id, person.get_mention()));
+        event.reply(
+            wither(person.id, person.get_mention(),
+                   std::get<std::string>(event.get_parameter("reason"))));
       } else if (event.command.get_command_name() == "unwither") {
-        // Unwithers the user if the author has the reaper role. (exact same
-        // code as the wither command. probably needs a function lol) Check
-        // for role
-        const std::vector<dpp::snowflake> &user_roles =
-            event.command.member.get_roles();
-        dpp::snowflake role = config["reaper_role"];
+        // Unwithers the user if the author has the reaper role.
+        // Check for role
 
-        bool has_role = std::find(user_roles.begin(), user_roles.end(), role) !=
-                        user_roles.end();
-
-        if (!has_role) {
+        if (!has_role(event.command.member,
+                      std::stoll(get_config_info("reaper_role")))) {
           event.reply("You do not have the reaper role.");
           return;
         }
@@ -134,6 +131,21 @@ int main() {
             std::get<dpp::snowflake>(event.get_parameter("another_user"));
         const dpp::user &person = event.command.get_resolved_user(user_id);
         event.reply(unwither(person.id, person.get_mention()));
+      } else if (event.command.get_command_name() == "config") {
+        // Sets a variable that is used in the code!
+        if (g->owner_id != event.command.get_issuing_user().id) {
+          event.reply("MUST BE OWNER");
+          return;
+        }
+        std::cout << "CONFIG CHANGE IN PROGRESS\n";
+        event.reply("Your config request is being processed. Please wait.");
+
+        // Sets the data
+        set_config_info(std::get<std::string>(event.get_parameter("variable")),
+                        std::get<std::string>(event.get_parameter("value")));
+
+        event.follow_up(event.command.get_issuing_user().get_mention() +
+                        "'s config request has been fullfilled.");
       }
     }
   });
@@ -149,26 +161,36 @@ int main() {
           bot.me.id);
       dpp::slashcommand wither("wither", "Wither someone...", bot.me.id);
       dpp::slashcommand unwither("unwither", "Cure someone!", bot.me.id);
+      dpp::slashcommand config(
+          "config", "Set a variable to be used in the code.", bot.me.id);
 
       // Add options
       withered.add_option(dpp::command_option(dpp::co_user, "another_user",
-                                              "Mention a user", true));
-      wither.add_option(dpp::command_option(dpp::co_user, "another_user",
-                                            "mention a user", true));
+                                              "mention a user", true));
+      wither
+          .add_option(dpp::command_option(dpp::co_user, "another_user",
+                                          "mention a user", true))
+          .add_option(dpp::command_option(dpp::co_string, "reason",
+                                          "reason for their death", true));
       unwither.add_option(dpp::command_option(dpp::co_user, "another_user",
                                               "mention a user", true));
-      // Push all commands
-      bot.global_bulk_command_create({ping, withered, wither, unwither, save});
-      std::cout << "COMMANDS CREATED!\n";
-      // Load config
-      std::ifstream in(CONFIG_FILE_PATH);
-      if (!in.is_open() || in.peek() == std::ifstream::traits_type::eof()) {
-        std::cout << "UNABLE TO FIND CONFIG. MOST COMMANDS WON'T WORK!\n";
-      } else {
-        in >> config;
+      // Add bulk options
+      dpp::command_option config_keys(dpp::co_string, "variable", "key to set",
+                                      true);
+
+      for (const auto &element : config_variables) {
+        config_keys.add_choice(dpp::command_option_choice(element, element));
       }
-      // Do Misc (outside functions, ...)
-      withered_init();
+      config.add_option(config_keys);
+      config.add_option(dpp::command_option(dpp::co_string, "value",
+                                            "value the key will store", true));
+      // Push all commands
+      bot.global_bulk_command_create(
+          {ping, withered, wither, unwither, save, config});
+      std::cout << "COMMANDS CREATED!\n";
+      // Load
+      load_config_info();
+      wither_init();
     }
   });
 

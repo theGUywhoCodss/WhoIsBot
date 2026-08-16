@@ -8,9 +8,13 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 # Create an executable
 add_executable(${PROJECT_NAME}
     src/main.cpp
-    src/withered.cpp
 )
- 
+target_sources(${PROJECT_NAME} PRIVATE
+    src/data/witherdata.cpp
+    src/data/configdata.cpp
+    src/handler/witherhandler.cpp
+
+)
 # Find our pre-installed DPP package (using FindDPP.cmake).
 find_package(DPP REQUIRED)
 
@@ -21,11 +25,11 @@ add_subdirectory(json)
 target_link_libraries(${PROJECT_NAME} 
     ${DPP_LIBRARIES}
     nlohmann_json::nlohmann_json)
-
+ 
 # Include the DPP directories.
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${DPP_INCLUDE_DIR}
-    "${CMAKE_CURRENT_SOURCE_DIR}/src"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
 )
  
 # Set C++ version
