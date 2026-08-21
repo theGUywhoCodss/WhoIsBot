@@ -8,10 +8,11 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 # Create an executable
 add_executable(${PROJECT_NAME}
     src/main.cpp
-)
+ )
 target_sources(${PROJECT_NAME} PRIVATE
     src/data/witherdata.cpp
     src/data/configdata.cpp
+src/data/steamcheckerdata.cpp
     src/handler/witherhandler.cpp
 
 )
@@ -21,10 +22,16 @@ find_package(DPP REQUIRED)
 set(JSON_BuildTests OFF CACHE INTERNAL "")
 add_subdirectory(json)
 
+include(FetchContent)
+FetchContent_Declare(cpr GIT_REPOSITORY https://github.com/libcpr/cpr.git
+                         GIT_TAG 1.14.2) # Replace with your desired git commit from: https://github.com/libcpr/cpr/releases
+FetchContent_MakeAvailable(cpr)
+
 # Link the pre-installed DPP package.
 target_link_libraries(${PROJECT_NAME} 
     ${DPP_LIBRARIES}
-    nlohmann_json::nlohmann_json)
+    nlohmann_json::nlohmann_json
+   cpr::cpr)
  
 # Include the DPP directories.
 target_include_directories(${PROJECT_NAME} PRIVATE

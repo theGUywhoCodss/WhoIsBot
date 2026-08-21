@@ -1,7 +1,9 @@
 #include "configdata.h"
+#include "steamcheckerdata.h"
 #include "witherdata.h"
 #include "witherhandler.h"
 #include <algorithm>
+#include <cstdint>
 #include <dpp/appcommand.h>
 #include <dpp/commandhandler.h>
 #include <dpp/dpp.h>
@@ -146,6 +148,15 @@ int main() {
 
         event.follow_up(event.command.get_issuing_user().get_mention() +
                         "'s config request has been fullfilled.");
+      } else if (event.command.get_command_name() == "clear") {
+        if (g->owner_id != event.command.get_issuing_user().id) {
+          event.reply("MUST BE OWNER");
+          return;
+        }
+        bot.global_bulk_command_delete();
+      } else if (event.command.get_command_name() == "getgame") {
+        event.reply(get_steamgame(
+            std::to_string(std::get<int64_t>(event.get_parameter("gameid")))));
       }
     }
   });
@@ -163,7 +174,10 @@ int main() {
       dpp::slashcommand unwither("unwither", "Cure someone!", bot.me.id);
       dpp::slashcommand config(
           "config", "Set a variable to be used in the code.", bot.me.id);
-
+      dpp::slashcommand clearcommand(
+          "clear", "Clear all the commands from the bot.", bot.me.id);
+      dpp::slashcommand getgame(
+          "getgame", "Gets a game from the cheapshark api", bot.me.id);
       // Add options
       withered.add_option(dpp::command_option(dpp::co_user, "another_user",
                                               "mention a user", true));
@@ -174,6 +188,8 @@ int main() {
                                           "reason for their death", true));
       unwither.add_option(dpp::command_option(dpp::co_user, "another_user",
                                               "mention a user", true));
+      getgame.add_option(dpp::command_option(dpp::co_integer, "gameid",
+                                             "CheapShark game id", true));
       // Add bulk options
       dpp::command_option config_keys(dpp::co_string, "variable", "key to set",
                                       true);
@@ -185,8 +201,8 @@ int main() {
       config.add_option(dpp::command_option(dpp::co_string, "value",
                                             "value the key will store", true));
       // Push all commands
-      bot.global_bulk_command_create(
-          {ping, withered, wither, unwither, save, config});
+      bot.global_bulk_command_create({ping, withered, wither, unwither, save,
+                                      config, clearcommand, getgame});
       std::cout << "COMMANDS CREATED!\n";
       // Load
       load_config_info();
